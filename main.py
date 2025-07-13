@@ -25,9 +25,14 @@ class ESCController:
         
     def initialize(self):
         """Initialize PWM and set to neutral position"""
+        if self.pwm is not None:
+            self.pwm.stop()  # Stop any existing PWM
+            time.sleep(0.1)
+        
         self.pwm = GPIO.PWM(self.pin, self.frequency)
-        self.pwm.start(MIN_THROTTLE)
-        time.sleep(0.1)
+        self.pwm.start(MIN_THROTTLE)  # Start at neutral/stop position
+        self.current_speed = 0  # Explicitly set speed to 0
+        time.sleep(0.2)  # Longer delay to ensure ESC recognizes signal
         
     def set_speed(self, speed_percent):
         """Set motor speed (0-100%) - thread safe"""
@@ -71,9 +76,10 @@ def setup_gpio():
     GPIO.setup(MOTOR_L_PIN, GPIO.OUT)
     GPIO.setup(MOTOR_R_PIN, GPIO.OUT)
     
-    # Initialize pins to LOW
+    # Initialize pins to LOW and hold them there
     GPIO.output(MOTOR_L_PIN, GPIO.LOW)
     GPIO.output(MOTOR_R_PIN, GPIO.LOW)
+    time.sleep(0.5)  # Add delay to ensure pins are stable
     
     # Initialize motor controllers
     motor_l = ESCController(MOTOR_L_PIN)
@@ -86,8 +92,12 @@ def setup_gpio():
     print("ESC arming sequence...")
     time.sleep(2)  # Wait for ESC to arm
     
+    # Explicitly set both motors to zero after initialization
+    motor_l.set_speed(0)
+    motor_r.set_speed(0)
+    time.sleep(0.5)  # Give time for ESC to register the stop command
+    
     print("Motors ready!")
-
 @app.route('/')
 def index():
     """Serve the main control interface from an HTML file"""
@@ -170,6 +180,13 @@ def cleanup():
 if __name__ == '__main__':
     try:
         setup_gpio()
+        
+        # Safety check - ensure both motors are stopped before starting web server
+        print("Final safety check - stopping all motors...")
+        motor_l.set_speed(0)
+        motor_r.set_speed(0)
+        time.sleep(1)
+        
         print("Starting web server...")
         print("Access the control interface at: http://[your-pi-ip]:5000")
         print("Press Ctrl+C to stop")
