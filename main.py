@@ -4,6 +4,29 @@ import time
 import threading
 import os
 
+# Add this global variable at the top
+pwm_keep_alive = True
+
+def pwm_keep_alive_thread():
+    """Keep PWM signals stable by periodically refreshing them"""
+    global pwm_keep_alive
+    while pwm_keep_alive:
+        try:
+            if motor_l and motor_l.pwm:
+                current_speed_l = motor_l.get_speed()
+                duty_cycle_l = MIN_THROTTLE + (current_speed_l / 100.0) * (MAX_THROTTLE - MIN_THROTTLE)
+                motor_l.pwm.ChangeDutyCycle(duty_cycle_l)
+            
+            if motor_r and motor_r.pwm:
+                current_speed_r = motor_r.get_speed()
+                duty_cycle_r = MIN_THROTTLE + (current_speed_r / 100.0) * (MAX_THROTTLE - MIN_THROTTLE)
+                motor_r.pwm.ChangeDutyCycle(duty_cycle_r)
+                
+        except Exception as e:
+            print(f"PWM keep-alive error: {e}")
+            
+        time.sleep(0.05)  # Refresh every 50ms
+
 app = Flask(__name__)
 
 # Motor control pins
@@ -46,7 +69,11 @@ class ESCController:
             # Convert percentage to duty cycle
             duty_cycle = MIN_THROTTLE + (speed_percent / 100.0) * (MAX_THROTTLE - MIN_THROTTLE)
             
-            self.pwm.ChangeDutyCycle(duty_cycle)
+            # Set duty cycle multiple times to ensure signal stability
+            for _ in range(3):
+                self.pwm.ChangeDutyCycle(duty_cycle)
+                time.sleep(0.01)  # Small delay between commands
+            
             self.current_speed = speed_percent
             return True
             
@@ -187,17 +214,24 @@ if __name__ == '__main__':
         motor_r.set_speed(0)
         time.sleep(1)
         
+        # Start PWM keep-alive thread
+        keep_alive_thread = threading.Thread(target=pwm_keep_alive_thread, daemon=True)
+        keep_alive_thread.start()
+        
         print("Starting web server...")
         print("Access the control interface at: http://[your-pi-ip]:5000")
         print("Press Ctrl+C to stop")
         
         # Run Flask app
-        app.run(host='0.0.0.0', port=5000, debug=False)
+        app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)
         
     except KeyboardInterrupt:
         print("\nShutting down...")
+        pwm_keep_alive = False
     except Exception as e:
         print(f"Error: {e}")
+        pwm_keep_alive = False
     finally:
+        pwm_keep_alive = False
         cleanup()
         print("Cleanup complete.")
