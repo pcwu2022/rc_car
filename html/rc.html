@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RC Motor Control</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            max-width: 600px;
+            width: 100%;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .motor-controls {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 30px;
+        }
+        
+        .motor-group {
+            text-align: center;
+            flex: 1;
+            margin: 0 10px;
+        }
+        
+        .motor-group h3 {
+            color: #555;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+        
+        .speed-display {
+            background: #2c3e50;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 1.8em;
+            font-weight: bold;
+            margin-bottom: 20px;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .control-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .btn {
+            padding: 15px 25px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.2em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .btn-up {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+        }
+        
+        .btn-down {
+            background: linear-gradient(135deg, #f44336, #da190b);
+            color: white;
+        }
+        
+        .emergency-controls {
+            text-align: center;
+            margin-top: 30px;
+        }
+        
+        .btn-emergency {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: white;
+            padding: 20px 40px;
+            font-size: 1.5em;
+            border-radius: 15px;
+            margin: 0 10px;
+        }
+        
+        .btn-emergency:hover {
+            background: linear-gradient(135deg, #ff5252, #d32f2f);
+        }
+        
+        .status {
+            text-align: center;
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        @media (max-width: 768px) {
+            .motor-controls {
+                flex-direction: column;
+            }
+            
+            .motor-group {
+                margin: 10px 0;
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚗 RC Motor Control</h1>
+        
+        <div class="motor-controls">
+            <div class="motor-group">
+                <h3>Left Motor</h3>
+                <div class="speed-display" id="leftSpeed">0%</div>
+                <div class="control-buttons">
+                    <button class="btn btn-up" onclick="adjustSpeed('left', 10)">⬆️ Speed Up</button>
+                    <button class="btn btn-down" onclick="adjustSpeed('left', -10)">⬇️ Speed Down</button>
+                </div>
+            </div>
+            
+            <div class="motor-group">
+                <h3>Right Motor</h3>
+                <div class="speed-display" id="rightSpeed">0%</div>
+                <div class="control-buttons">
+                    <button class="btn btn-up" onclick="adjustSpeed('right', 10)">⬆️ Speed Up</button>
+                    <button class="btn btn-down" onclick="adjustSpeed('right', -10)">⬇️ Speed Down</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="emergency-controls">
+            <button class="btn btn-emergency" onclick="stopAllMotors()">🛑 STOP ALL</button>
+            <button class="btn btn-emergency" onclick="setMaxSpeed()">🚀 MAX SPEED</button>
+        </div>
+        
+        <div id="status" class="status" style="display: none;"></div>
+    </div>
+
+    <script>
+        let leftSpeed = 0;
+        let rightSpeed = 0;
+        
+        function updateSpeedDisplay() {
+            document.getElementById('leftSpeed').textContent = leftSpeed + '%';
+            document.getElementById('rightSpeed').textContent = rightSpeed + '%';
+        }
+        
+        function showStatus(message, isError = false) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = 'status ' + (isError ? 'error' : 'success');
+            statusDiv.style.display = 'block';
+            
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 3000);
+        }
+        
+        function adjustSpeed(motor, change) {
+            const data = {
+                motor: motor,
+                change: change
+            };
+            
+            fetch('/adjust_speed', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    if (motor === 'left') {
+                        leftSpeed = data.speed;
+                    } else {
+                        rightSpeed = data.speed;
+                    }
+                    updateSpeedDisplay();
+                    showStatus(`${motor} motor speed: ${data.speed}%`);
+                } else {
+                    showStatus('Error: ' + data.message, true);
+                }
+            })
+            .catch(error => {
+                showStatus('Connection error', true);
+                console.error('Error:', error);
+            });
+        }
+        
+        function stopAllMotors() {
+            fetch('/stop_all', {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    leftSpeed = 0;
+                    rightSpeed = 0;
+                    updateSpeedDisplay();
+                    showStatus('All motors stopped');
+                } else {
+                    showStatus('Error stopping motors', true);
+                }
+            })
+            .catch(error => {
+                showStatus('Connection error', true);
+                console.error('Error:', error);
+            });
+        }
+        
+        function setMaxSpeed() {
+            fetch('/max_speed', {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    leftSpeed = 100;
+                    rightSpeed = 100;
+                    updateSpeedDisplay();
+                    showStatus('All motors at maximum speed');
+                } else {
+                    showStatus('Error setting max speed', true);
+                }
+            })
+            .catch(error => {
+                showStatus('Connection error', true);
+                console.error('Error:', error);
+            });
+        }
+        
+        // Initialize display
+        updateSpeedDisplay();
+        
+        // Keyboard controls
+        document.addEventListener('keydown', function(event) {
+            switch(event.key) {
+                case 'w':
+                case 'W':
+                    adjustSpeed('left', 10);
+                    break;
+                case 's':
+                case 'S':
+                    adjustSpeed('left', -10);
+                    break;
+                case 'i':
+                case 'I':
+                    adjustSpeed('right', 10);
+                    break;
+                case 'k':
+                case 'K':
+                    adjustSpeed('right', -10);
+                    break;
+                case ' ':
+                    event.preventDefault();
+                    stopAllMotors();
+                    break;
+            }
+        });
+    </script>
+</body>
+</html>
