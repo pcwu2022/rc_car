@@ -223,7 +223,8 @@ if __name__ == '__main__':
         print("Press Ctrl+C to stop")
         
         # Run Flask app
-        app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)
+        # app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)
+        time.sleep(100000)
         
     except KeyboardInterrupt:
         print("\nShutting down...")
