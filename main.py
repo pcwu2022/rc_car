@@ -20,6 +20,11 @@ def pwm_keep_alive_thread():
             if motor_r and motor_r.pwm:
                 current_speed_r = motor_r.get_speed()
                 duty_cycle_r = MIN_THROTTLE + (current_speed_r / 100.0) * (MAX_THROTTLE - MIN_THROTTLE)
+                
+                # Apply offset to right motor at zero speed to prevent twitching
+                if current_speed_r == 0:
+                    duty_cycle_r += RIGHT_MOTOR_OFFSET
+                    
                 motor_r.pwm.ChangeDutyCycle(duty_cycle_r)
                 
         except Exception as e:
@@ -37,6 +42,9 @@ MOTOR_R_PIN = 13
 PWM_FREQUENCY = 50
 MIN_THROTTLE = 5.0
 MAX_THROTTLE = 10.0
+
+# Add a small offset to ensure right motor is stable
+RIGHT_MOTOR_OFFSET = 0.1
 
 class ESCController:
     def __init__(self, pin, frequency=PWM_FREQUENCY):
@@ -57,7 +65,7 @@ class ESCController:
         self.current_speed = 0  # Explicitly set speed to 0
         time.sleep(0.2)  # Longer delay to ensure ESC recognizes signal
         
-    def set_speed(self, speed_percent):
+    def set_speed(self, speed_percent, is_right_motor=False):
         """Set motor speed (0-100%) - thread safe"""
         with self.lock:
             if self.pwm is None:
@@ -68,6 +76,10 @@ class ESCController:
             
             # Convert percentage to duty cycle
             duty_cycle = MIN_THROTTLE + (speed_percent / 100.0) * (MAX_THROTTLE - MIN_THROTTLE)
+            
+            # Apply offset for right motor to stabilize it
+            if is_right_motor and speed_percent == 0:
+                duty_cycle += RIGHT_MOTOR_OFFSET
             
             # Set duty cycle multiple times to ensure signal stability
             for _ in range(3):
@@ -110,10 +122,12 @@ def setup_gpio():
     
     # Initialize motor controllers
     motor_l = ESCController(MOTOR_L_PIN)
+    time.sleep(0.2)  # Stagger motor controller initialization
     motor_r = ESCController(MOTOR_R_PIN)
     
     print("Initializing ESCs...")
     motor_l.initialize()
+    time.sleep(0.5)  # Staggered initialization to prevent power issues
     motor_r.initialize()
     
     print("ESC arming sequence...")
@@ -121,7 +135,7 @@ def setup_gpio():
     
     # Explicitly set both motors to zero after initialization
     motor_l.set_speed(0)
-    motor_r.set_speed(0)
+    motor_r.set_speed(0, is_right_motor=True)
     time.sleep(0.5)  # Give time for ESC to register the stop command
     
     print("Motors ready!")
@@ -152,7 +166,7 @@ def adjust_speed():
         elif motor == 'right':
             current_speed = motor_r.get_speed()
             new_speed = max(0, min(100, current_speed + change))
-            success = motor_r.set_speed(new_speed)
+            success = motor_r.set_speed(new_speed, is_right_motor=True)
         else:
             return jsonify({'success': False, 'message': 'Invalid motor specified'})
         
@@ -169,7 +183,7 @@ def stop_all():
     """Stop both motors"""
     try:
         motor_l.set_speed(0)
-        motor_r.set_speed(0)
+        motor_r.set_speed(0, is_right_motor=True)
         return jsonify({'success': True})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
@@ -179,7 +193,7 @@ def max_speed():
     """Set both motors to maximum speed"""
     try:
         motor_l.set_speed(100)
-        motor_r.set_speed(100)
+        motor_r.set_speed(100, is_right_motor=True)
         return jsonify({'success': True})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
@@ -211,7 +225,7 @@ if __name__ == '__main__':
         # Safety check - ensure both motors are stopped before starting web server
         print("Final safety check - stopping all motors...")
         motor_l.set_speed(0)
-        motor_r.set_speed(0)
+        motor_r.set_speed(0, is_right_motor=True)
         time.sleep(1)
         
         # Start PWM keep-alive thread
@@ -223,8 +237,7 @@ if __name__ == '__main__':
         print("Press Ctrl+C to stop")
         
         # Run Flask app
-        # app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)
-        time.sleep(100000)
+        app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)
         
     except KeyboardInterrupt:
         print("\nShutting down...")
