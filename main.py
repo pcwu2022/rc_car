@@ -28,8 +28,8 @@ def pwm_motor(speed):
 def loop():
     motor_speed = 0
     if is_button_pressed():
-        print("Button Pressed!")
         motor_speed = (motor_speed + 20) % 80
+        print(f"Motor speed set to: {motor_speed}")
         pwm_motor(motor_speed)
 
 if __name__ == "__main__":
