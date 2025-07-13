@@ -17,8 +17,8 @@ def is_button_pressed():
     return GPIO.input(BUTTON_PIN) == GPIO.HIGH
 
 def pwm_motor(speed):
-    pwm_l = GPIO.PWM(MOTOR_L_PIN, 1000)  # 1 kHz frequency
-    pwm_r = GPIO.PWM(MOTOR_R_PIN, 1000)
+    pwm_l = GPIO.PWM(MOTOR_L_PIN, 40)
+    pwm_r = GPIO.PWM(MOTOR_R_PIN, 40)
     pwm_l.start(speed)
     pwm_r.start(speed)
     time.sleep(1)  # Run for 1 second
@@ -26,9 +26,11 @@ def pwm_motor(speed):
     pwm_r.stop()
 
 def loop():
+    motor_speed = 0
     if is_button_pressed():
         print("Button Pressed!")
-        pwm_motor(100)  # Example: set motor speed to 100
+        motor_speed = (motor_speed + 20) % 80
+        pwm_motor(motor_speed)
 
 if __name__ == "__main__":
     setup()
