@@ -167,6 +167,13 @@ def adjust_speed():
             current_speed = motor_r.get_speed()
             new_speed = max(0, min(100, current_speed + change))
             success = motor_r.set_speed(new_speed, is_right_motor=True)
+        elif motor == 'both':
+            current_speed_l = motor_l.get_speed()
+            current_speed_r = motor_r.get_speed()
+            new_speed_l = max(0, min(100, current_speed_l + change))
+            new_speed_r = max(0, min(100, current_speed_r + change))
+            success = motor_l.set_speed(new_speed_l) and motor_r.set_speed(new_speed_r, is_right_motor=True)
+            new_speed = (new_speed_l + new_speed_r) / 2
         else:
             return jsonify({'success': False, 'message': 'Invalid motor specified'})
         
@@ -192,8 +199,15 @@ def stop_all():
 def max_speed():
     """Set both motors to maximum speed"""
     try:
-        motor_l.set_speed(100)
-        motor_r.set_speed(100, is_right_motor=True)
+        # Gradually ramp up speed to avoid sudden jerk
+        current_l = motor_l.get_speed()
+        current_r = motor_r.get_speed()
+        
+        # Increment in steps of 10% with small delays
+        for speed in range(max(10, current_l), 110, 10):
+            motor_l.set_speed(min(speed, 100))
+            motor_r.set_speed(min(speed, 100), is_right_motor=True)
+            time.sleep(0.5)  # 500ms delay between increments
         return jsonify({'success': True})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})

@@ -159,8 +159,8 @@
                 <h3>Left Motor</h3>
                 <div class="speed-display" id="leftSpeed">0%</div>
                 <div class="control-buttons">
-                    <button class="btn btn-up" onclick="adjustSpeed('left', 1)">⬆️ Speed Up</button>
-                    <button class="btn btn-down" onclick="adjustSpeed('left', -1)">⬇️ Speed Down</button>
+                    <button class="btn btn-up" onclick="adjustSpeed('left', 10)">⬆️ Speed Up</button>
+                    <button class="btn btn-down" onclick="adjustSpeed('left', -10)">⬇️ Speed Down</button>
                 </div>
             </div>
             
@@ -168,8 +168,17 @@
                 <h3>Right Motor</h3>
                 <div class="speed-display" id="rightSpeed">0%</div>
                 <div class="control-buttons">
-                    <button class="btn btn-up" onclick="adjustSpeed('right', 1)">⬆️ Speed Up</button>
-                    <button class="btn btn-down" onclick="adjustSpeed('right', -1)">⬇️ Speed Down</button>
+                    <button class="btn btn-up" onclick="adjustSpeed('right', 10)">⬆️ Speed Up</button>
+                    <button class="btn btn-down" onclick="adjustSpeed('right', -10)">⬇️ Speed Down</button>
+                </div>
+            </div>
+
+            <div class="both-motors">
+                <h3>Both Motors</h3>
+                <div class="speed-display" id="bothSpeed">0%</div>
+                <div class="control-buttons">
+                    <button class="btn btn-up" onclick="adjustSpeed('both', 10)">⬆️ Speed Up</button>
+                    <button class="btn btn-down" onclick="adjustSpeed('both', -10)">⬇️ Speed Down</button>
                 </div>
             </div>
         </div>
