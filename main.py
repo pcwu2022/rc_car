@@ -172,8 +172,8 @@ def adjust_speed():
             current_speed_r = motor_r.get_speed()
             new_speed_l = max(0, min(100, current_speed_l + change))
             new_speed_r = max(0, min(100, current_speed_r + change))
-            success = motor_l.set_speed(new_speed_l) and motor_r.set_speed(new_speed_r, is_right_motor=True)
             new_speed = (new_speed_l + new_speed_r) / 2
+            success = motor_l.set_speed(new_speed) and motor_r.set_speed(new_speed, is_right_motor=True)
         else:
             return jsonify({'success': False, 'message': 'Invalid motor specified'})
         

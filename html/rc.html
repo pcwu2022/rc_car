@@ -229,7 +229,10 @@
                 if (data.success) {
                     if (motor === 'left') {
                         leftSpeed = data.speed;
+                    } else if (motor === 'right') {
+                        rightSpeed = data.speed;
                     } else {
+                        leftSpeed = data.speed;
                         rightSpeed = data.speed;
                     }
                     updateSpeedDisplay();
